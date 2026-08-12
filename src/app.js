@@ -10,6 +10,7 @@ import { SESSION_COOKIE, authMiddleware, clearSessionCookie, createSession, dele
 import { registerProfileRoutes } from './profile.js';
 import { registerMatchRoutes } from './matches.js';
 import { registerChatRoutes } from './chat.js';
+import { registerDay5Routes } from './day5.js';
 
 const registerSchema = z.object({
   fullName: z.string().trim().min(1).max(100),
@@ -88,6 +89,7 @@ export function createApp({ db, config, now = () => new Date() }) {
   registerProfileRoutes(app, { db, config, now });
   registerMatchRoutes(app, { db, config, now });
   registerChatRoutes(app, { db, config, now });
+  registerDay5Routes(app, { db, config, now });
   app.use(express.static('public'));
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found.' }));
   app.use((error, _req, res, _next) => {
