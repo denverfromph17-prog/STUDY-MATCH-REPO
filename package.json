@@ -1,0 +1,27 @@
+{
+  "name": "study-match-ph",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Study Match PH API-first foundation",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test --test-concurrency=1"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "helmet": "^8.1.0",
+    "multer": "^2.2.0",
+    "zod": "^4.0.17"
+  },
+  "devDependencies": {
+    "supertest": "^7.1.4"
+  }
+}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Study Match PH — Find your study rhythm</title>
+  <meta name="description" content="A study-buddy platform built for Filipino learners aged 18 and above.">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/landing-extra.css">
+</head>
+<body>
+  <header><a class="brand" href="/" aria-label="Study Match PH home"><span>SM</span> Study Match <em>PH</em></a><button id="nav-login" class="text-button">Log in</button></header>
+  <main>
+    <section class="hero">
+      <div class="eyebrow">Built for focused Filipino learners</div>
+      <h1>Your next study breakthrough starts with the <i>right person.</i></h1>
+      <p>Study Match PH helps you build momentum with people who show up, stay focused, and share your drive.</p>
+      <div class="trust"><span>✓ 18+ community</span><span>✓ Private by design</span><span>✓ Built in the Philippines</span></div>
+    </section>
+    <section class="card" aria-labelledby="form-title">
+      <div class="tabs"><button id="register-tab" class="active">Create account</button><button id="login-tab">Log in</button></div>
+      <h2 id="form-title">Find your study people</h2><p id="form-subtitle">Create your free account to get started.</p>
+      <div id="message" role="alert" aria-live="polite"></div>
+      <form id="register-form">
+        <label>Full name<input name="fullName" autocomplete="name" maxlength="100" required placeholder="Juan Dela Cruz"></label>
+        <label>Email address<input name="email" type="email" autocomplete="email" maxlength="254" required placeholder="juan@example.com"></label>
+        <label>Password<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"></label>
+        <label>Date of birth<input name="dateOfBirth" type="date" autocomplete="bday" required></label>
+        <aside><strong>18+ community</strong> Study Match PH is for users 18 years old and above.</aside>
+        <button class="primary" type="submit">Create my account <span>→</span></button>
+      </form>
+      <form id="login-form" hidden>
+        <label>Email address<input name="email" type="email" autocomplete="email" required></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+        <button class="primary" type="submit">Log in <span>→</span></button>
+      </form>
+      <section id="account" hidden><p>You’re signed in as <strong id="account-name"></strong>.</p><a class="primary" href="/profile.html">Build my study profile →</a><button id="logout" class="account-logout">Log out</button></section>
+    </section>
+  </main>
+  <footer>Made for students who mean business. <span>🇵🇭</span></footer>
+  <script src="/app.js" defer></script>
+</body></html>

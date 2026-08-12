@@ -1,0 +1,38 @@
+import test, { beforeEach, afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import request from 'supertest';
+import { mkdtempSync, rmSync, readdirSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createApp } from '../src/app.js';
+import { createDatabase } from '../src/db.js';
+
+let db, app, uploadDir, agent;
+const user = { fullName:'Ana Reyes',email:'ana@example.com',password:'Password123!',dateOfBirth:'2000-02-02' };
+const profile = { displayName:'Ana',school:'UP Diliman',course:'BS Computer Science',yearLevel:'3rd Year',bio:'Learning by building.',preferredStudyMode:'Either',subjectIds:[1,2],goalIds:[1,2],studyStyleIds:[1,2] };
+beforeEach(async()=>{ uploadDir=mkdtempSync(path.join(os.tmpdir(),'study-match-')); db=createDatabase(':memory:'); app=createApp({db,config:{isProduction:false,sessionDays:7,uploadDir},now:()=>new Date('2026-08-12T12:00:00Z')}); agent=request.agent(app); await agent.post('/api/auth/register').send(user); });
+afterEach(()=>{db.close();rmSync(uploadDir,{recursive:true,force:true});});
+const png=Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a,0,0,0,0]);
+const jpeg=Buffer.from([0xff,0xd8,0xff,0xe0,0,0,0,0]);
+
+test('authenticated user can retrieve their private-safe profile',async()=>{const r=await agent.get('/api/profile');assert.equal(r.status,200);assert.equal(r.body.profile.displayName,'Ana Reyes');for(const key of ['password','passwordHash','password_hash','dateOfBirth','sessionToken','email'])assert.equal(key in r.body.profile,false);});
+test('authenticated user can update profile and multiple normalized selections',async()=>{const r=await agent.put('/api/profile').send(profile);assert.equal(r.status,200);assert.equal(r.body.profile.subjects.length,2);assert.equal(r.body.profile.studyGoals.length,2);assert.equal(r.body.profile.studyStyles.length,2);assert.equal(db.prepare('SELECT count(*) count FROM profile_subjects').get().count,2);});
+test('unauthenticated user cannot update profile',async()=>{assert.equal((await request(app).put('/api/profile').send(profile)).status,401);});
+test('user cannot modify another profile with a supplied user ID',async()=>{const other=request.agent(app);await other.post('/api/auth/register').send({...user,fullName:'Ben Cruz',email:'ben@example.com'});const otherId=db.prepare('SELECT id FROM users WHERE email=?').get('ben@example.com').id;const r=await agent.put('/api/profile').send({...profile,userId:otherId});assert.equal(r.status,400);assert.equal(db.prepare('SELECT display_name FROM profiles WHERE user_id=?').get(otherId).display_name,'Ben Cruz');});
+test('valid image upload succeeds with generated filename',async()=>{const r=await agent.post('/api/profile/photo').attach('photo',png,{filename:'../../evil.png',contentType:'image/png'});assert.equal(r.status,200);assert.match(r.body.profilePictureUrl,/^\/profile-photos\/[a-f0-9-]+\.png$/);assert.equal(readdirSync(uploadDir).length,1);});
+test('invalid image type is rejected',async()=>{const r=await agent.post('/api/profile/photo').attach('photo',Buffer.from('script'),{filename:'x.svg',contentType:'image/svg+xml'});assert.equal(r.status,400);assert.equal(readdirSync(uploadDir).length,0);});
+test('spoofed image MIME type is rejected',async()=>{const r=await agent.post('/api/profile/photo').attach('photo',Buffer.from('not png'),{filename:'x.png',contentType:'image/png'});assert.equal(r.status,400);});
+test('oversized image is rejected',async()=>{const big=Buffer.alloc(5*1024*1024+1);big.set(png);const r=await agent.post('/api/profile/photo').attach('photo',big,{filename:'x.png',contentType:'image/png'});assert.equal(r.status,413);});
+test('user can replace profile picture and old file is removed',async()=>{await agent.post('/api/profile/photo').attach('photo',png,{filename:'a.png',contentType:'image/png'});const old=readdirSync(uploadDir)[0];const r=await agent.post('/api/profile/photo').attach('photo',jpeg,{filename:'b.jpg',contentType:'image/jpeg'});assert.equal(r.status,200);assert.equal(readdirSync(uploadDir).length,1);assert.notEqual(readdirSync(uploadDir)[0],old);});
+test('user can remove profile picture',async()=>{await agent.post('/api/profile/photo').attach('photo',png,{filename:'a.png',contentType:'image/png'});assert.equal((await agent.delete('/api/profile/photo')).status,204);assert.equal(readdirSync(uploadDir).length,0);assert.equal((await agent.get('/api/profile')).body.profile.profilePictureUrl,null);});
+test('available subjects are retrieved from catalog',async()=>{const r=await request(app).get('/api/subjects');assert.equal(r.status,200);assert.ok(r.body.subjects.some((x)=>x.name==='Programming'));});
+test('invalid subject ID is rejected transactionally',async()=>{const r=await agent.put('/api/profile').send({...profile,subjectIds:[9999]});assert.equal(r.status,400);assert.equal(db.prepare('SELECT count(*) count FROM profile_subjects').get().count,0);});
+test('multiple study goals can be selected',async()=>{const r=await agent.put('/api/profile').send(profile);assert.equal(r.body.profile.studyGoals.length,2);});
+test('invalid goal ID is rejected',async()=>{assert.equal((await agent.put('/api/profile').send({...profile,goalIds:[9999]})).status,400);});
+test('multiple study styles can be selected',async()=>{const r=await agent.put('/api/profile').send(profile);assert.equal(r.body.profile.studyStyles.length,2);});
+test('invalid style ID is rejected',async()=>{assert.equal((await agent.put('/api/profile').send({...profile,studyStyleIds:[9999]})).status,400);});
+test('valid structured schedule can be saved and retrieved',async()=>{const availability=[{day:'Monday',startTime:'19:00',endTime:'21:00'},{day:'Saturday',startTime:'14:00',endTime:'17:00'}];const r=await agent.put('/api/profile/availability').send({availability});assert.equal(r.status,200);assert.deepEqual((await agent.get('/api/profile/availability')).body.availability,availability);});
+test('invalid day is rejected',async()=>{assert.equal((await agent.put('/api/profile/availability').send({availability:[{day:'Funday',startTime:'10:00',endTime:'11:00'}]})).status,400);});
+test('invalid time is rejected',async()=>{assert.equal((await agent.put('/api/profile/availability').send({availability:[{day:'Monday',startTime:'25:00',endTime:'26:00'}]})).status,400);});
+test('start time after end time is rejected',async()=>{assert.equal((await agent.put('/api/profile/availability').send({availability:[{day:'Monday',startTime:'12:00',endTime:'10:00'}]})).status,400);});
+test('invalid study mode and mass-assigned fields are rejected',async()=>{assert.equal((await agent.put('/api/profile').send({...profile,preferredStudyMode:'Teleport'})).status,400);assert.equal((await agent.put('/api/profile').send({...profile,email:'takeover@example.com'})).status,400);});
