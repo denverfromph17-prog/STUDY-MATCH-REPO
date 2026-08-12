@@ -43,6 +43,12 @@ The schema is initialized automatically and contains `users`, one-to-one `profil
 
 Authenticated users can manage only the profile inferred from their session through `GET/PUT /api/profile`, `POST/DELETE /api/profile/photo`, and `GET/PUT /api/profile/availability`. Catalogs are available at `/api/subjects`, `/api/study-goals`, and `/api/study-styles`. Profile photos accept signature-validated JPEG, PNG, or WebP files up to 5 MB and use generated server filenames.
 
+## Day 3 matching
+
+`GET /api/matches` returns privacy-safe study-buddy candidates ranked by a deterministic 100-point score: subjects 35, goals 20, study styles 15, mode 10, and overlapping availability 20. The response includes the score breakdown, shared inputs, and plain-language reasons. The threshold, result limit, and bounded candidate scan are configurable.
+
+Match requests use `POST /api/matches/:userId/request|accept|reject|cancel`; `GET /api/match-requests` returns the authenticated user's request and mutual-match state. Accepted requests create one normalized `matches` row. Chat and messaging are intentionally not implemented.
+
 ## Test
 
 ```bash

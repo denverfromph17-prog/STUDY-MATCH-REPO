@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { UNDERAGE_MESSAGE, isAtLeast18, parseDateOfBirth } from './age.js';
 import { SESSION_COOKIE, authMiddleware, clearSessionCookie, createSession, deleteCurrentSession, setSessionCookie } from './auth.js';
 import { registerProfileRoutes } from './profile.js';
+import { registerMatchRoutes } from './matches.js';
 
 const registerSchema = z.object({
   fullName: z.string().trim().min(1).max(100),
@@ -84,6 +85,7 @@ export function createApp({ db, config, now = () => new Date() }) {
   app.get('/api/auth/me', authMiddleware(db), (req, res) => res.json({ user: publicUser(req.user) }));
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
   registerProfileRoutes(app, { db, config, now });
+  registerMatchRoutes(app, { db, config, now });
   app.use(express.static('public'));
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found.' }));
   app.use((error, _req, res, _next) => {

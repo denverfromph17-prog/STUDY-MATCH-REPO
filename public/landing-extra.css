@@ -1,1 +1,1 @@
-.primary{text-decoration:none}.account-logout{width:100%;margin-top:10px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:12px}
+.primary{text-decoration:none}.profile-link{display:block;text-align:center;color:var(--blue);padding:12px;text-decoration:none;font-weight:600;font-size:14px}.account-logout{width:100%;margin-top:0;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:12px}
