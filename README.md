@@ -49,6 +49,10 @@ Authenticated users can manage only the profile inferred from their session thro
 
 Match requests use `POST /api/matches/:userId/request|accept|reject|cancel`; `GET /api/match-requests` returns the authenticated user's request and mutual-match state. Accepted requests create one normalized `matches` row. Chat and messaging are intentionally not implemented.
 
+## Day 4 private chat
+
+Private text chat is authorized exclusively through accepted rows in `matches`. `POST /api/conversations/open/:userId` idempotently opens a normalized conversation; conversation list/detail and cursor-paginated message endpoints are under `/api/conversations`. Every request revalidates both participation and the current mutual match. Messages are session-authored, length-limited, persisted transactionally, and rate-limited. No real-time infrastructure or Day 5 features are included.
+
 ## Test
 
 ```bash

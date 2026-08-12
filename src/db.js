@@ -118,6 +118,32 @@ export function createDatabase(filename) {
     CREATE INDEX IF NOT EXISTS idx_match_requests_receiver_status ON match_requests(receiver_user_id, status);
     CREATE INDEX IF NOT EXISTS idx_match_requests_sender_status ON match_requests(sender_user_id, status);
     CREATE INDEX IF NOT EXISTS idx_matches_user_two ON matches(user_two_id);
+    CREATE TABLE IF NOT EXISTS conversations (
+      id TEXT PRIMARY KEY,
+      user_one_id TEXT NOT NULL,
+      user_two_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      CHECK (user_one_id < user_two_id),
+      UNIQUE (user_one_id, user_two_id),
+      FOREIGN KEY (user_one_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_two_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_one_id, user_two_id) REFERENCES matches(user_one_id, user_two_id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS messages (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL,
+      sender_user_id TEXT NOT NULL,
+      message_text TEXT NOT NULL CHECK (length(trim(message_text)) > 0 AND length(message_text) <= 10000),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+      FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_conversations_user_two ON conversations(user_two_id);
+    CREATE INDEX IF NOT EXISTS idx_conversations_updated ON conversations(updated_at DESC, id);
+    CREATE INDEX IF NOT EXISTS idx_messages_conversation_page ON messages(conversation_id, created_at DESC, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_user_id);
   `);
   const timestamp = new Date().toISOString();
   const seed = (table, values) => {
