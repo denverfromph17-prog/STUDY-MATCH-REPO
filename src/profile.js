@@ -19,6 +19,29 @@ const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const availabilitySchema = z.array(z.object({ day: z.enum(DAYS), startTime: time, endTime: time }).strict()
   .refine((entry) => entry.startTime < entry.endTime, { message:'Start time must be before end time.' })).max(50);
 
+function validImage(buffer, mime) {
+  if (mime === 'image/png') {
+    return buffer.length >= 45
+      && buffer.subarray(0, 8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]))
+      && buffer.readUInt32BE(8) === 13
+      && buffer.subarray(12, 16).toString('ascii') === 'IHDR'
+      && buffer.readUInt32BE(16) > 0 && buffer.readUInt32BE(20) > 0
+      && buffer.subarray(buffer.length - 12, buffer.length - 8).equals(Buffer.from([0,0,0,0]))
+      && buffer.subarray(buffer.length - 8, buffer.length - 4).toString('ascii') === 'IEND';
+  }
+  if (mime === 'image/jpeg') {
+    return buffer.length >= 4 && buffer[0] === 0xff && buffer[1] === 0xd8
+      && buffer[buffer.length - 2] === 0xff && buffer[buffer.length - 1] === 0xd9;
+  }
+  if (mime === 'image/webp') {
+    return buffer.length >= 20 && buffer.subarray(0,4).toString('ascii') === 'RIFF'
+      && buffer.readUInt32LE(4) === buffer.length - 8
+      && buffer.subarray(8,12).toString('ascii') === 'WEBP'
+      && ['VP8 ','VP8L','VP8X'].includes(buffer.subarray(12,16).toString('ascii'));
+  }
+  return false;
+}
+
 const listSelected = (db, table, junction, foreignKey, userId) => db.prepare(`
   SELECT c.id, c.name FROM ${table} c JOIN ${junction} j ON j.${foreignKey} = c.id
   WHERE j.profile_id = ? ORDER BY c.name
@@ -86,9 +109,7 @@ export function registerProfileRoutes(app, { db, config, now }) {
   app.post('/api/profile/photo', authenticate, (req,res,next) => upload.single('photo')(req,res,(error) => {
     if(error) return res.status(error.code==='LIMIT_FILE_SIZE'?413:400).json({error:error.code==='LIMIT_FILE_SIZE'?'Profile picture must be 5 MB or smaller.':'Invalid upload.'});
     if(!req.file) return res.status(400).json({error:'A profile picture is required.'});
-    const signatures={ 'image/jpeg':[[0xff,0xd8,0xff]], 'image/png':[[0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]], 'image/webp':[[0x52,0x49,0x46,0x46]] };
-    const signature=signatures[req.file.mimetype]; const valid=signature?.some((sig)=>sig.every((byte,index)=>req.file.buffer[index]===byte)) && (req.file.mimetype!=='image/webp'||req.file.buffer.subarray(8,12).toString()==='WEBP');
-    if(!valid) return res.status(400).json({error:'Only valid JPEG, PNG, or WebP images are allowed.'});
+    if(!validImage(req.file.buffer,req.file.mimetype)) return res.status(400).json({error:'Only valid JPEG, PNG, or WebP images are allowed.'});
     const ext={'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp'}[req.file.mimetype]; const photoId=`${crypto.randomUUID()}${ext}`;
     const old=db.prepare('SELECT photo_id FROM profiles WHERE user_id=?').get(req.user.id).photo_id;
     import('node:fs').then(({writeFileSync})=>{ writeFileSync(path.join(uploadDir,photoId),req.file.buffer,{flag:'wx'}); db.prepare('UPDATE profiles SET photo_id=?,photo_mime=?,updated_at=? WHERE user_id=?').run(photoId,req.file.mimetype,now().toISOString(),req.user.id); if(old) safeDelete(uploadDir,old); res.json({profilePictureUrl:`/profile-photos/${photoId}`}); }).catch(next);

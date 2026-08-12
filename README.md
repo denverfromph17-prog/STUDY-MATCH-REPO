@@ -1,6 +1,6 @@
 # Study Match PH
 
-Day 1 foundation for an API-first study-buddy platform for Filipino adults.
+An API-first study-buddy platform for Filipino adults aged 18 and above.
 
 ## Architecture
 
@@ -47,7 +47,7 @@ Authenticated users can manage only the profile inferred from their session thro
 
 `GET /api/matches` returns privacy-safe study-buddy candidates ranked by a deterministic 100-point score: subjects 35, goals 20, study styles 15, mode 10, and overlapping availability 20. The response includes the score breakdown, shared inputs, and plain-language reasons. The threshold, result limit, and bounded candidate scan are configurable.
 
-Match requests use `POST /api/matches/:userId/request|accept|reject|cancel`; `GET /api/match-requests` returns the authenticated user's request and mutual-match state. Accepted requests create one normalized `matches` row. Chat and messaging are intentionally not implemented.
+Match requests use `POST /api/matches/:userId/request|accept|reject|cancel`; `GET /api/match-requests` returns the authenticated user's request and mutual-match state. Accepted requests create one normalized `matches` row.
 
 ## Day 4 private chat
 
@@ -60,3 +60,14 @@ pnpm test
 ```
 
 Tests cover registration validation and age boundaries, duplicate emails, login/logout, protected-route authorization, direct-API age bypass attempts, password storage, and origin-based CSRF protection.
+
+## Production deployment
+
+- Run behind HTTPS and set `NODE_ENV=production` so session cookies receive the `Secure` attribute.
+- Set `TRUST_PROXY` only when the application is behind a trusted reverse proxy. Use `true` for one trusted hop or an explicit hop count from 1–10.
+- Store the SQLite database and profile-upload directory on persistent, access-controlled storage and back both up regularly.
+- Run one application instance per SQLite database. The built-in rate limiter is process-local; use a shared, trusted store before horizontally scaling.
+- Restrict database and upload directory permissions to the application account. Do not serve `.env` or runtime data from the public directory.
+- Monitor availability, 5xx responses, authentication throttling, disk capacity, and backup restoration. The health route is `/api/health`.
+
+Configuration is validated at startup. Unsafe values such as oversized chat limits or invalid proxy hop counts cause startup to fail rather than silently weakening controls.
