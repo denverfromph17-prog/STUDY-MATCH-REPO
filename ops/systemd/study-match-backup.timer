@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Study Match PH backup every six hours
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:15:00
+Persistent=true
+Unit=study-match-backup.service
+
+[Install]
+WantedBy=timers.target

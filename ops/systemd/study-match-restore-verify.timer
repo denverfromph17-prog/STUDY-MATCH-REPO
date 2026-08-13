@@ -1,0 +1,11 @@
+[Unit]
+Description=Verify a Study Match PH backup weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 03:30:00
+Persistent=true
+RandomizedDelaySec=15m
+Unit=study-match-restore-verify.service
+
+[Install]
+WantedBy=timers.target

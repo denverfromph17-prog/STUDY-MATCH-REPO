@@ -31,7 +31,8 @@ Open `http://localhost:3000`. Configuration options are documented in `.env.exam
 | POST | `/api/auth/login` | No | Create a session |
 | POST | `/api/auth/logout` | No | Invalidate the current session |
 | GET | `/api/auth/me` | Yes | Return the authenticated user |
-| GET | `/api/health` | No | Health check |
+| GET | `/api/health` | No | Process liveness check |
+| GET | `/api/ready` | No | Database readiness check |
 
 Sessions are opaque random tokens stored as SHA-256 hashes in the database and sent in `HttpOnly`, `SameSite=Strict` cookies (`Secure` in production). Passwords are bcrypt-hashed. API responses use an explicit public-user projection and never expose hashes.
 
@@ -63,11 +64,13 @@ Tests cover registration validation and age boundaries, duplicate emails, login/
 
 ## Production deployment
 
+The approved single-instance DigitalOcean/Caddy deployment, backup, restore, monitoring, and recovery procedures are documented in [`ops/README.md`](ops/README.md). The committed files contain templates only; production credentials belong in root-readable files under `/etc/study-match` and must never be committed.
+
 - Run behind HTTPS and set `NODE_ENV=production` so session cookies receive the `Secure` attribute.
 - Set `TRUST_PROXY` only when the application is behind a trusted reverse proxy. Use `true` for one trusted hop or an explicit hop count from 1–10.
 - Store the SQLite database and profile-upload directory on persistent, access-controlled storage and back both up regularly.
 - Run one application instance per SQLite database. The built-in rate limiter is process-local; use a shared, trusted store before horizontally scaling.
 - Restrict database and upload directory permissions to the application account. Do not serve `.env` or runtime data from the public directory.
-- Monitor availability, 5xx responses, authentication throttling, disk capacity, and backup restoration. The health route is `/api/health`.
+- Monitor process liveness at `/api/health` and database readiness at `/api/ready`, plus 5xx responses, authentication throttling, disk capacity, and backup restoration.
 
 Configuration is validated at startup. Unsafe values such as oversized chat limits or invalid proxy hop counts cause startup to fail rather than silently weakening controls.

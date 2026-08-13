@@ -50,6 +50,16 @@ test('security headers protect browser responses', async () => {
   assert.equal(response.headers['permissions-policy'], 'camera=(), microphone=(), geolocation=()');
 });
 
+test('liveness is independent while readiness reflects database availability', async () => {
+  assert.deepEqual((await request(app).get('/api/health')).body, { status:'ok' });
+  assert.deepEqual((await request(app).get('/api/ready')).body, { status:'ready' });
+  db.close();
+  const unavailable = await request(app).get('/api/ready');
+  assert.equal(unavailable.status, 503);
+  assert.deepEqual(unavailable.body, { status:'not_ready' });
+  db = { close() {} };
+});
+
 test('production session cookie is secure and token stays out of the response', async () => {
   const production = createApp({ db, config:{ isProduction:true, sessionDays:7, uploadDir }, now:() => currentNow });
   const response = await request(production).post('/api/auth/register').send(adult);
@@ -79,6 +89,19 @@ test('invalid production configuration fails closed', () => {
   } finally {
     if (prior === undefined) delete process.env.CHAT_MAX_MESSAGE_LENGTH;
     else process.env.CHAT_MAX_MESSAGE_LENGTH = prior;
+  }
+});
+
+test('server host configuration is restricted to loopback', () => {
+  const prior = process.env.HOST;
+  try {
+    process.env.HOST = '0.0.0.0';
+    assert.throws(() => getConfig(), /HOST must be a loopback address/);
+    process.env.HOST = '127.0.0.1';
+    assert.equal(getConfig().host, '127.0.0.1');
+  } finally {
+    if (prior === undefined) delete process.env.HOST;
+    else process.env.HOST = prior;
   }
 });
 

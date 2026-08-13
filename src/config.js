@@ -15,9 +15,16 @@ const trustProxy = () => {
   return hops;
 };
 
+const host = () => {
+  const value = process.env.HOST || '127.0.0.1';
+  if (!['127.0.0.1', '::1'].includes(value)) throw new Error('HOST must be a loopback address (127.0.0.1 or ::1).');
+  return value;
+};
+
 export function getConfig(overrides = {}) {
   const config = {
     port: integer('PORT', 3000, { max:65535 }),
+    host: host(),
     databasePath: process.env.DATABASE_PATH || path.resolve('data/study-match.db'),
     uploadDir: process.env.UPLOAD_DIR || path.resolve('data/uploads/profile-photos'),
     isProduction: process.env.NODE_ENV === 'production',

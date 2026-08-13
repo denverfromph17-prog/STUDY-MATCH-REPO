@@ -88,6 +88,14 @@ export function createApp({ db, config, now = () => new Date() }) {
   });
   app.get('/api/auth/me', authMiddleware(db), (req, res) => res.json({ user: publicUser(req.user) }));
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+  app.get('/api/ready', (_req, res) => {
+    try {
+      db.prepare('SELECT 1 AS ready').get();
+      res.json({ status: 'ready' });
+    } catch {
+      res.status(503).json({ status: 'not_ready' });
+    }
+  });
   registerProfileRoutes(app, { db, config, now });
   registerMatchRoutes(app, { db, config, now });
   registerChatRoutes(app, { db, config, now });

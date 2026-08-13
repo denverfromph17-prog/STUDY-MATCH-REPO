@@ -1,0 +1,26 @@
+[Unit]
+Description=Back up Study Match PH database and uploads
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/srv/study-match-data
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=/etc/study-match/study-match.env
+EnvironmentFile=/etc/study-match/backup.env
+ExecStart=/usr/bin/bash /opt/study-match/current/ops/scripts/backup.sh
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateDevices=true
+ReadWritePaths=/srv/study-match-data /var/tmp /var/cache/restic /run/lock
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

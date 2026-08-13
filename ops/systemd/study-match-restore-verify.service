@@ -1,0 +1,22 @@
+[Unit]
+Description=Verify the latest Study Match PH backup can be restored
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=/etc/study-match/backup.env
+ExecStart=/usr/bin/bash /opt/study-match/current/ops/scripts/verify-restore.sh
+UMask=0077
+Nice=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateDevices=true
+ReadWritePaths=/var/tmp /var/cache/restic
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

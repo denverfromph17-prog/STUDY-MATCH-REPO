@@ -1,0 +1,24 @@
+study.example.com {
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:3000 {
+		header_up -X-Forwarded-For
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=86400"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/study-match-access.log {
+			roll_size 20MiB
+			roll_keep 10
+			roll_keep_for 720h
+		}
+		format json
+	}
+}
